@@ -113,8 +113,8 @@ FILE_FORMAT = (FORMAT_NAME = 'CSV_FILE_FORMAT');
 
 SELECT * FROM ORDER_PRODUCTS LIMIT 10;
 ```
-# Data Transformation
 ![Main](https://github.com/sumanthmalipeddi/instacart_ecom_elt/blob/main/Instacart_Fact_Dim_Modeling.drawio.png)
+# Data Transformation
 ```
 --WRITING FACT AND DIMENSION TABLE
 --USING CTAS QUERY
