@@ -13,190 +13,218 @@
 * Snowflake 
 # Data Base Used
 Kaggle - [Instacart Market Basket Analysis](https://www.kaggle.com/competitions/instacart-market-basket-analysis/data)
-* Here we can build the database by utilising **spotipy** API the gateway to seamless integration with Spotify's vast music catalogue and powerful features. 
+ 
 
 ```
-#For Jupyter Notebook Code Implementation
-pip install spotipy
+#For Snowflake Worksheet Code Implementation
 ```
-# Budget Allocation
-* With the service of AWS Cloud Watch we have allocated budget limits so resources will be under watch
-# Data Extraction
-* Amazon Lambda services do not have a pip function so we can add layers by manually uploading spotipy layer and extracting the data from the API to the Amazon S3 (to_processed) bucket **in raw folder**.
 
 ### Important Note: Never Disclose your cliend_id and cliend_secret ( In the configurations we can add environmental variables for secured usage)
+## Data Loading
 ```
-import json
-import os
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
-import boto3
-from datetime import datetime
+USE DATABASE DW_COURSE_DB;
+USE SCHEMA INSTACART;
 
-def lambda_handler(event, context):
-    client_id = os.environ.get('client_id')
-    client_secret = os.environ.get('client_secret')
-    client_credentials_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
-    sp = spotipy.Spotify(client_credentials_manager= client_credentials_manager)
-    playlists = sp.user_playlists('spotipy')
-    
-    playlist_link = "https://open.spotify.com/playlist/37i9dQZF1DWTt3gMo0DLxA"
-    playlist_URI = playlist_link.split('/')[-1]
-    
-    spotify_data = sp.playlist_tracks(playlist_URI)
-    
-    client = boto3.client('s3')
-    
-    filename = "spotify_raw_" + str(datetime.now()) + ".json"
-    
-    client.put_object(
-        Bucket = "spotify-telugu-etl-project",
-        Key = "raw_data/to_processed/" + filename,
-        Body = json.dumps(spotify_data)
-        )
+CREATE STAGE MY_STAGE
+URL = "😈"
+CREDENTIALS = (AWS_KEY_ID = '😈' 
+AWS_SECRET_KEY = '😈');
+
+CREATE OR REPLACE FILE FORMAT CSV_FILE_FORMAT
+TYPE = 'CSV'
+FIELD_DELIMITER = ','
+SKIP_HEADER = 1
+FIELD_OPTIONALLY_ENCLOSED_BY = '"';
+
+CREATE TABLE AISLES (
+    AISLE_ID INTEGER PRIMARY KEY,
+    AISLE VARCHAR
+    );
+
+SELECT * FROM AISLES;
+
+COPY INTO AISLES (AISLE_ID, AISLE)
+FROM @my_stage/aisles.csv
+FILE_FORMAT = (FORMAT_NAME = 'csv_file_format');
+
+SELECT * FROM AISLES;
+
+CREATE TABLE DEPARTMENTS (
+    DEPARTMENT_ID INTEGER PRIMARY KEY,
+    DEPARTMENT VARCHAR
+);
+
+SELECT * FROM DEPARTMENTS;
+
+COPY INTO DEPARTMENTS (DEPARTMENT_ID, DEPARTMENT)
+FROM @my_stage/departments.csv
+FILE_FORMAT = (FORMAT_NAME = 'CSV_FILE_FORMAT');
+
+SELECT * FROM DEPARTMENTS;
+
+
+CREATE TABLE PRODUCTS (
+    product_id INTEGER PRIMARY KEY,
+    product_name VARCHAR,
+    aisle_id INTEGER,
+    department_id INTEGER,
+    FOREIGN KEY (aisle_id) REFERENCES AISLES (aisle_id),
+    FOREIGN KEY (department_id) REFERENCES DEPARTMENTS (department_id)
+);
+
+select * from products;
+
+COPY INTO PRODUCTS (PRODUCT_ID,PRODUCT_NAME,AISLE_ID,DEPARTMENT_ID)
+FROM @my_stage/products.csv
+FILE_FORMAT = (FORMAT_NAME = 'CSV_FILE_FORMAT');
+
+select COUNT(*) from products;
+
+CREATE OR REPLACE TABLE ORDERS (
+    order_id INTEGER PRIMARY KEY,
+    user_id INTEGER,
+    eval_set VARCHAR,
+    order_number INTEGER,
+    order_dow INTEGER,
+    order_hour_of_day INTEGER,
+    days_since_prior_order INTEGER
+);
+
+COPY INTO ORDERS (order_id,user_id,eval_set,order_number,order_dow,order_hour_of_day,days_since_prior_order)
+FROM @my_stage/orders.csv
+FILE_FORMAT = (FORMAT_NAME = 'CSV_FILE_FORMAT');
+
+SELECT * FROM ORDERS LIMIT 10;
+
+CREATE TABLE ORDER_PRODUCTS (
+    order_id INTEGER,
+    product_id INTEGER,
+    add_to_cart_order INTEGER,
+    reordered INTEGER,
+    PRIMARY KEY (order_id, product_id),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+SELECT * FROM ORDER_PRODUCTS;
+
+COPY INTO ORDER_PRODUCTS (order_id,product_id,add_to_cart_order,reordered)
+FROM @my_stage/order_products.csv
+FILE_FORMAT = (FORMAT_NAME = 'CSV_FILE_FORMAT');
+
+SELECT * FROM ORDER_PRODUCTS LIMIT 10;
 ```
 # Data Transformation
 ```
-#For Jupyter Notebook - code transformations
-pip install pandas
-```
-```
-import pandas as pd
-```
-* In the Amazon Lambda pip install does not work so we can add the layer of pandas library in their create layers section.
-```
-import json
-import boto3
-from datetime import datetime
-from io import StringIO
-import pandas as pd
+--WRITING FACT AND DIMENSION TABLE
+--USING CTAS QUERY
 
-def album(data):
-    
-    album_list = []
-    for row in data['items']:
-        
-        album_id = row['track']['album']['id']
-        album_name = row['track']['album']['name']
-        album_release_date = row['track']['album']['release_date']
-        album_total_tracks = row['track']['album']['total_tracks']
-        album_url = row['track']['album']['external_urls']['spotify']
-        album_element = {'album_id' : album_id,'album_name':album_name,'release_date':album_release_date,
-                                 'total_tracks':album_total_tracks,'url':album_url}
-        album_list.append(album_element)
-        
-    return album_list
+USE DATABASE DW_COURSE_DB;
+USE SCHEMA INSTACART;
 
-def artist(data):
-    
-    artist_list = []
-    
-    for row in data['items']:
-        for key, value in row.items():
-            if key == 'track':
-                for artist in value['artists']:
-                    artist_dict = {'artist_id' : artist['id'],'artist_name' : artist['name'], 
-                                       'external_url' : artist['external_urls']['spotify']}
-                    artist_list.append(artist_dict)
-    
-    return artist_list
-    
-def song(data):
-    song_list = []
-    for row in data['items']:
-        song_id = row['track']['id']
-        song_name = row['track']['name']
-        song_duration = row['track']['duration_ms']
-        song_url = row['track']['external_urls']['spotify']
-        song_popularity = row['track']['popularity']
-        song_added = row['added_at']
-        #album code importing
-        album_id = row['track']['album']['id']
-        artist_id = row['track']['album']['artists'][0]['id']
-        song_element = {'song_id':song_id,'song_name':song_name,'duration_ms':song_duration,'url':song_url,
-                        'popularity':song_popularity,'song_added':song_added,'album_id':album_id,
-                        'artist_id':artist_id
-                       }
-        song_list.append(song_element)
-    
-    return song_list
-    
+CREATE OR REPLACE TABLE DIM_USERS AS (
+    SELECT
+        USER_ID
+    FROM 
+        ORDERS
+);
 
-def lambda_handler(event, context):
-    
-    s3 = boto3.client('s3')
-    Bucket = "spotify-telugu-etl-project"
-    Key = "raw_data/to_processed/"
-    
-    spotify_data = []
-    spotify_keys = []
-    
-    for file in s3.list_objects(Bucket = Bucket, Prefix = Key)['Contents']:
-        file_key = file['Key']
-        if file_key.split('.')[-1] == 'json':
-            response = s3.get_object(Bucket = Bucket, Key = file_key)
-            content = response['Body']
-            jsonObject = json.loads(content.read())
-            spotify_data.append(jsonObject)
-            spotify_keys.append(file_key)
-            
-    for data in spotify_data:
-        album_list = album(data)
-        artist_list = artist(data)
-        song_list = song(data)
-        
-        #album
-        album_df = pd.DataFrame.from_dict(album_list)
-        album_df = album_df.drop_duplicates(subset=['album_id'])
-        
-        #artist
-        artist_df = pd.DataFrame.from_dict(artist_list)
-        artist_df = artist_df.drop_duplicates(subset=['artist_id'])
-        
-        #song
-        song_df = pd.DataFrame.from_dict(song_list)
+CREATE OR REPLACE TABLE DIM_PRODUCTS AS (
+    SELECT 
+        PRODUCT_ID, 
+        PRODUCT_NAME
+    FROM 
+        PRODUCTS  
+);
 
-        # Transform 'release_date' column in album_df to datetime
-        album_df['release_date'] = pd.to_datetime(album_df['release_date'],format='mixed')
-        # Transform 'song_added' column in song_df to datetime
-        song_df['song_added'] = pd.to_datetime(song_df['song_added'],format='mixed')
+CREATE OR REPLACE TABLE DIM_DEPARTMENTS AS (
+    SELECT 
+        DEPARTMENT_ID,
+        DEPARTMENT
+    FROM 
+        DEPARTMENTS
+);
+
+CREATE OR REPLACE TABLE DIM_AISLES AS (
+    SELECT
+        AISLE_ID,
+        AISLE
+    FROM
+        AISLES
+);
+
+CREATE OR REPLACE TABLE DIM_ORDER AS (
+    SELECT 
+        ORDER_ID,
+        ORDER_NUMBER,
+        ORDER_DOW,
+        ORDER_HOUR_OF_DAY,
+        DAYS_SINCE_PRIOR_ORDER
+    FROM
+        ORDERS
+);
+
+CREATE OR REPLACE TABLE FACT_ORDER_PRODUCTS AS (
+    SELECT 
+        OP.ORDER_ID,
+        OP.PRODUCT_ID,
+        O.USER_ID,
+        P.DEPARTMENT_ID,
+        P.AISLE_ID,
+        OP.ADD_TO_CART_ORDER,
+        OP.REORDERED
+    FROM
+        ORDER_PRODUCTS OP
+    JOIN 
+        ORDERS O ON OP.ORDER_ID = O.ORDER_ID
+    JOIN 
+        PRODUCTS P ON OP.PRODUCT_ID = P.PRODUCT_ID
+);
+
+CREATE TABLE fact_order_products AS (
+  SELECT
+    op.order_id,
+    op.product_id,
+    o.user_id,
+    p.department_id,
+    p.aisle_id,
+    op.add_to_cart_order,
+    op.reordered
+  FROM
+    order_products op
+  JOIN
+    orders o ON op.order_id = o.order_id
+  JOIN
+    products p ON op.product_id = p.product_id
+);
+
+USE DATABASE DW_COURSE_DB;
+USE SCHEMA INSTACART_DIM_FACT;
+
+
+CREATE TABLE DW_COURSE_DB.INSTACART_DIM_FACT.DIM_AISLES CLONE DW_COURSE_DB.INSTACART.DIM_AISLES;
+CREATE TABLE DW_COURSE_DB.INSTACART_DIM_FACT.DIM_DEPARTMENTS CLONE DW_COURSE_DB.INSTACART.DIM_DEPARTMENTS;
+CREATE TABLE DW_COURSE_DB.INSTACART_DIM_FACT.DIM_ORDER CLONE DW_COURSE_DB.INSTACART.DIM_ORDER;
+CREATE TABLE DW_COURSE_DB.INSTACART_DIM_FACT.DIM_PRODUCTS CLONE DW_COURSE_DB.INSTACART.DIM_PRODUCTS;
+CREATE TABLE DW_COURSE_DB.INSTACART_DIM_FACT.DIM_USERS CLONE DW_COURSE_DB.INSTACART.DIM_USERS;
+CREATE TABLE DW_COURSE_DB.INSTACART_DIM_FACT.FACT_ORDER_PRODUCTS CLONE DW_COURSE_DB.INSTACART.FACT_ORDER_PRODUCTS;
+
+USE DATABASE DW_COURSE_DB;
+USE SCHEMA INSTACART;
+
+DROP TABLE DW_COURSE_DB.INSTACART.DIM_AISLES;
+DROP TABLE DW_COURSE_DB.INSTACART.DIM_DEPARTMENTS;
+DROP TABLE DW_COURSE_DB.INSTACART.DIM_ORDER;
+DROP TABLE DW_COURSE_DB.INSTACART.DIM_PRODUCTS;
+DROP TABLE DW_COURSE_DB.INSTACART.DIM_USERS;
+DROP TABLE DW_COURSE_DB.INSTACART.ORDER_PRODUCTS;
+UNDROP TABLE DW_COURSE_DB.INSTACART.ORDER_PRODUCTS;
+
+DROP TABLE DW_COURSE_DB.INSTACART.FACT_ORDER_PRODUCTS;
+
+SELECT * FROM DW_COURSE_DB.INSTACART_DIM_FACT.FACT_ORDER_PRODUCTS LIMIT 10;
 ```
-* After the Data Frames are correctly cleansed we need to import them into the Amazon S3 transformed folder with subfolders of songs, albums and artists folders.
-```
-        #putting the songs data into s3 bucket
-        songs_key = "transformed_data/songs_data/songs_transformed_" + str(datetime.now()) + ".csv"
-        song_buffer=StringIO()
-        song_df.to_csv(song_buffer, index=False)
-        song_content = song_buffer.getvalue()
-        s3.put_object(Bucket=Bucket, Key=songs_key, Body=song_content)
-        
-        album_key = "transformed_data/album_data/album_transformed_" + str(datetime.now()) + ".csv"
-        album_buffer=StringIO()
-        album_df.to_csv(album_buffer, index=False)
-        album_content = album_buffer.getvalue()
-        s3.put_object(Bucket=Bucket, Key=album_key, Body=album_content)
-        
-        artist_key = "transformed_data/artist_data/artist_transformed_" + str(datetime.now()) + ".csv"
-        artist_buffer=StringIO()
-        artist_df.to_csv(artist_buffer, index=False)
-        artist_content = artist_buffer.getvalue()
-        s3.put_object(Bucket=Bucket, Key=artist_key, Body=artist_content)
-        
-```
-* We also need to remove the file from the to_processed folder to the processed folder **in raw** and delete the older files
-```
- s3_resource = boto3.resource('s3')
-    for key in spotify_keys:
-        copy_source = {
-            'Bucket': Bucket,
-            'Key': key
-        }
-        s3_resource.meta.client.copy(copy_source, Bucket, 'raw_data/processed/' + key.split("/")[-1])    
-        s3_resource.Object(Bucket, key).delete()
-```
-# Data Load
-* After the successful creation of subfolders we are now loading data into Amazon Athena by Amazon Glue-Crawler by naming the new database **spotify_db** and tabling **songs, albums** and **artists**.
-```
+
 #MySQL
 SELECT * FROM "spoitfy_db"."songs" LIMIT 10; #Execute Each Line
 ```
