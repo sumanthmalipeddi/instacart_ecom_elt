@@ -1,22 +1,18 @@
 # Instacart - ELT - Data Engineering Project
 ## Story Line:
-**Client:** I need a list of trending Telugu songs and to collect the album, artists and song details in the database for future analytics purposes.
-<br>**Developer:** Is there any particular platform you regularly use to listen to the songs?
-<br> **Client:** Yeah I do use a lot of platforms like Wynk Music, JioSaavn, YouTube Music and presently **Spotify**.
-<br> **Developer:** We shall take Spotify for the project and collect the trending song details along with albums and artists.
+**Client:** The Kaggle has uploaded an anonymous Instacart data set for solving a specific machine learning competition. We need to get data stored in snowflake data warehouse with complete transformations to fact and dimension tables. 
+<br>**Developer:** We can use SQL transformation by CTAS statements and provide in snowflake. Where does the data present right now.
+<br> **Client:** You need to import from AWS S3 bucket the following access id and keys will be provided.
+<br> **Developer:** Ok.
 # Architecture
-![Main](https://github.com/sumanthmalipeddi/spotify_trending_telugu/blob/main/Architecture.png)
+![Main](https://github.com/sumanthmalipeddi/instacart_ecom_elt/blob/main/instacart.drawio.png)
 # Technology Used
-* Programming Language - Python
+* Programming Language - SQL
 * Amazon Web Services Cloud Platform
-  * AWS CloudWatch: Monitor AWS resources and applications in real-time to gain insights into system performance.
-  * AWS Lambda: Run code without provisioning or managing servers, responding to events across AWS services.
   * AWS S3: Store and retrieve data securely at any scale, with high availability and durability.
-  * AWS Triggers: Automate actions in response to events across various AWS services for streamlined workflows.
-  * AWS Glue (Crawler): Automatically discover, catalogue, and transform your data to make it readily available for analysis.
-  * AWS Athena: Query data in Amazon S3 using standard SQL without the need for managing infrastructure, enabling quick and cost-effective analysis.
+* Snowflake 
 # Data Base Used
-Spotify - [Trending Telugu Songs](https://open.spotify.com/playlist/37i9dQZF1DWTt3gMo0DLxA)
+Kaggle - [Instacart Market Basket Analysis]((https://www.kaggle.com/competitions/instacart-market-basket-analysis/data))
 * Here we can build the database by utilising **spotipy** API the gateway to seamless integration with Spotify's vast music catalogue and powerful features. 
 
 ```
