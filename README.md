@@ -226,7 +226,8 @@ DROP TABLE DW_COURSE_DB.INSTACART.FACT_ORDER_PRODUCTS;
 
 SELECT * FROM DW_COURSE_DB.INSTACART_DIM_FACT.FACT_ORDER_PRODUCTS LIMIT 10;
 ```
-
+# Snowflake Preview
+![Main](https://github.com/sumanthmalipeddi/instacart_ecom_elt/blob/main/snowflake.JPG)
 
 
 
