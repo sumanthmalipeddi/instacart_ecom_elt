@@ -15,7 +15,7 @@
 Kaggle - [Instacart Market Basket Analysis](https://www.kaggle.com/competitions/instacart-market-basket-analysis/data)
  
 
-##For Snowflake Worksheet Code Implementation
+## For Snowflake Worksheet Code Implementation
 
 ### Important Note: Never Disclose your cliend_id and cliend_secret ( In the configurations we can add environmental variables for secured usage)
 ![Main](https://github.com/sumanthmalipeddi/instacart_ecom_elt/blob/main/instakart_kaggle.drawio.png)
