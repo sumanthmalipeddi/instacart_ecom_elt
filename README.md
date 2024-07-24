@@ -12,7 +12,7 @@
   * AWS S3: Store and retrieve data securely at any scale, with high availability and durability.
 * Snowflake 
 # Data Base Used
-Kaggle - [Instacart Market Basket Analysis]((https://www.kaggle.com/competitions/instacart-market-basket-analysis/data))
+Kaggle - [Instacart Market Basket Analysis](https://www.kaggle.com/competitions/instacart-market-basket-analysis/data)
 * Here we can build the database by utilising **spotipy** API the gateway to seamless integration with Spotify's vast music catalogue and powerful features. 
 
 ```
